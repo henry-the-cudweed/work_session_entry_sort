@@ -89,9 +89,7 @@ merged_data = merged_data[column_order]
 url_prefix = 'https://www.calflora.org/entry/poe.html#vrid='
 merged_data['Link'] = url_prefix + merged_data['Reference']
 merged_data = merged_data [['Link'] + column_order]
-# Print out a list of all column titles
-#print("Column Titles:")
-#print(merged_data.columns.tolist())
+
 
 # Specify the path where you want to save the Excel file with a specific name
 output_file_path = 'merged_pivot_work_session.xlsx'
