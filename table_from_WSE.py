@@ -81,11 +81,14 @@ column_order = ['Reference', 'Total Hours']  + reference_columns + date_columns
 print("date columns", date_columns)
 
 
-
 # Reorganize columns
 merged_data = pd.merge(pivot_work_session, planning_sheet[['Reference'] + reference_columns], on='Reference', how='left')
 merged_data = merged_data[column_order]
 
+#add Calflora links
+url_prefix = 'https://www.calflora.org/entry/poe.html#vrid='
+merged_data['Link'] = url_prefix + merged_data['Reference']
+merged_data = merged_data [['Link'] + column_order]
 # Print out a list of all column titles
 #print("Column Titles:")
 #print(merged_data.columns.tolist())
