@@ -163,9 +163,6 @@ merged_data['Est Infested Cover Range'] = merged_data.apply(lambda row:
 )
 #endregion
 
-#region reorganize merged_data columns
-merged_data = merged_data[['Canyon','Common Name','Link','Reference', 'Total Hours','Next return',  'est person-hours remaining','Status', 'state of patch','Gross Area',  'Percent Cover', 'Est Infested Cover Range'] + date_columns + ["Latitude","Longitude"]]
-#endregion
 
 #region import geojson_string polygons for canyons
 geojson_string = """
@@ -503,6 +500,27 @@ gdf_merged['Canyon'] = gdf_merged.apply(lambda row: get_canyon(row), axis=1)
 merged_data['Canyon'] = gdf_merged['Canyon']
 #endregion
 
+#region create Most Recent Date column
+
+# Convert date columns to datetime
+date_df = merged_data[date_columns].apply(pd.to_datetime, errors='coerce', unit='D')
+
+# Find the most recent date for each row where there were hours worked
+merged_data['Most Recent Date'] = date_df.apply(lambda row: row.dropna().index[-1] if not row.dropna().empty else pd.NaT, axis=1)
+
+# Sort the DataFrame by "Most Recent Date"
+merged_data.sort_values(by='Most Recent Date', inplace=True, ascending=False)
+#endregion
+
+#region reorganize merged_data columns
+merged_data = merged_data[['Canyon','Common Name','Link','Reference', 
+                           'Most Recent Date',
+                           'Total Hours',
+                           'Gross Area',  'Percent Cover', 
+                           'Est Infested Cover Range',
+                           'Next return',  'est person-hours remaining','Status', 
+                           'state of patch'] + date_columns + ["Latitude","Longitude"]]
+#endregion
 
 #region Export the merged_data DataFrame to an Excel file in the same folder
 merged_data.to_excel('merged_data.xlsx', index=False)
