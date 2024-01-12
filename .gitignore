@@ -4,3 +4,5 @@ calflora-out.csv
 pivot_work_session.xlsx
 tables.ipynb
 merged_data.xlsx
+merged_data_*.xlsx
+config.py

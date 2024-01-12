@@ -17,17 +17,26 @@ import datetime
 import re
 import geopandas as gpd
 import shapely
+import config
+import requests
+from datetime import timedelta
 
 
 #endregion
 
 #region delete old files
+
 # Specify the file names for the existing files
 pivot_work_session_file = 'pivot_work_session.xlsx'
+merged_data_file = 'merged_data.xlsx'
 # Check if the files exist and delete them if they do
 if os.path.exists(pivot_work_session_file):
     os.remove(pivot_work_session_file)
     print(f"Previous file {pivot_work_session_file} has been deleted.")
+
+if os.path.exists(merged_data_file):
+    os.remove(merged_data_file)
+    print(f"Previous file {merged_data_file} has been deleted.")
 #endregion
     
 #region load work_session_entry.csv and clean up
@@ -127,10 +136,7 @@ merged_data['Reference'] = merged_data['Merged_ID_Reference']
 
 #endregion
 
-#region add Calflora links
-url_prefix = 'https://www.calflora.org/entry/poe.html#vrid='
-merged_data['Link'] = url_prefix + merged_data['Reference']
-#endregion
+
 
 #region create 'Est Infested Cover Range' column 
 #Extract numerical values from "Percent Cover" column and convert to numeric
@@ -164,7 +170,6 @@ merged_data['Est Infested Cover Range'] = merged_data.apply(lambda row:
 #endregion
 
 
-#region import geojson_string polygons for canyons
 geojson_string = """
 {
   "type": "FeatureCollection",
@@ -476,7 +481,6 @@ geojson_string = """
   ]
 }
 """
-#endregion
 
 #region create geodataframe
 gdf = gpd.read_file(geojson_string, driver='GeoJSON')
@@ -510,17 +514,110 @@ merged_data['Most Recent Date'] = date_df.apply(lambda row: row.dropna().index[-
 
 # Sort the DataFrame by "Most Recent Date"
 merged_data.sort_values(by='Most Recent Date', inplace=True, ascending=False)
+
+
 #endregion
 
-#region reorganize merged_data columns
-merged_data = merged_data[['Canyon','Common Name','Link','Reference', 
-                           'Most Recent Date',
+
+
+
+
+#region recurrance interval formula 
+
+from datetime import timedelta
+
+merged_data['Most Recent Date'] = pd.to_datetime(merged_data['Most Recent Date'], errors='coerce')
+# Print unique values in 'Most Recent Date' for debugging
+print("Unique values in 'Most Recent Date' column:", merged_data['Most Recent Date'].unique())
+
+# Print data type and a sample row
+#print(merged_data['Most Recent Date'].dtype)
+#print(merged_data[['Most Recent Date', 'Common Name']].head())
+
+merged_data = merged_data[['Canyon','Common Name','Reference', 
+                           'Most Recent Date', 
                            'Total Hours',
                            'Gross Area',  'Percent Cover', 
                            'Est Infested Cover Range',
                            'Next return',  'est person-hours remaining','Status', 
                            'state of patch'] + date_columns + ["Latitude","Longitude"]]
+
+merged_data.to_excel('merged_data_3.xlsx', index=False)
+
+# Function to determine the next treatment date
+def calculate_next_treatment(row):
+
+    last_treatment_date = row['Most Recent Date']
+    species = row['Common Name']
+
+    if pd.isna(last_treatment_date):  # Check for missing values
+        return None  # Return None for missing values
+
+    # Set the recurrence interval based on species (you can customize this)
+    recurrence_interval = {
+        'Upright veldt grass': 50,
+        'Cape ivy': 120,
+        'Thoroughwort': 120,
+        'French broom': 175,
+        'daily' : 1,
+        # Add more species with their respective intervals
+    }
+
+    # Calculate the next treatment date
+    interval = recurrence_interval.get(species, 30)  # Default to 30 days if species not found
+    last_treatment_date = pd.to_datetime(last_treatment_date)
+    next_treatment = last_treatment_date + timedelta(days=interval)
+
+    return next_treatment.strftime("%m-%d-%Y")
+
+
+merged_data = merged_data[['Link','Canyon','Common Name','Reference', 
+                           'Most Recent Date', 
+                           'Total Hours',
+                           'Gross Area',  'Percent Cover', 
+                           'Est Infested Cover Range',
+                           'Next return',  'est person-hours remaining','Status', 
+                           'state of patch'] + date_columns + ["Latitude","Longitude"]]
+
+merged_data.to_excel('merged_data_4.xlsx', index=False)
+
+
+print("most recent date values")
+print(merged_data['Most Recent Date'].head())
+merged_data['Most Recent Date'] = merged_data['Most Recent Date'].dt.strftime('%m-%d-%Y')
+
+merged_data.to_excel('merged_data_5.xlsx', index=False)
+
+
+# Apply the function to create a new column "Next Treatment Date"
+merged_data['Next Treatment Date'] = merged_data.apply(calculate_next_treatment, axis=1)
 #endregion
+
+merged_data.to_excel('merged_data_6.xlsx', index=False)
+
+#region add Calflora links
+url_prefix = 'https://www.calflora.org/entry/poe.html#vrid='
+merged_data['Link'] = url_prefix + merged_data['Reference']
+#endregion
+
+#region reorganize merged_data columns
+merged_data = merged_data[['Canyon','Common Name','Reference', 
+                           'Most Recent Date', 'Next Treatment Date',
+                           'Total Hours',
+                           'Gross Area',  'Percent Cover', 
+                           'Est Infested Cover Range',
+                           'Next return',  'est person-hours remaining','Status', 
+                           'state of patch'] + date_columns + ["Latitude","Longitude"]]
+
+merged_data['Most Recent Date'] = pd.to_datetime(merged_data['Most Recent Date'], 
+                                                  format='%m-%d-%Y').dt.strftime('%m-%d-%Y')
+
+
+
+merged_data.sort_values(by='Most Recent Date', ascending=False, inplace=True)
+
+#endregion
+
 
 #region Export the merged_data DataFrame to an Excel file in the same folder
 merged_data.to_excel('merged_data.xlsx', index=False)
