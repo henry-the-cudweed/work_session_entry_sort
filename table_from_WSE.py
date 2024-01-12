@@ -534,6 +534,7 @@ print("Unique values in 'Most Recent Date' column:", merged_data['Most Recent Da
 #print(merged_data['Most Recent Date'].dtype)
 #print(merged_data[['Most Recent Date', 'Common Name']].head())
 
+'''
 merged_data = merged_data[['Canyon','Common Name','Reference', 
                            'Most Recent Date', 
                            'Total Hours',
@@ -543,6 +544,7 @@ merged_data = merged_data[['Canyon','Common Name','Reference',
                            'state of patch'] + date_columns + ["Latitude","Longitude"]]
 
 merged_data.to_excel('merged_data_3.xlsx', index=False)
+'''
 
 # Function to determine the next treatment date
 def calculate_next_treatment(row):
@@ -571,7 +573,7 @@ def calculate_next_treatment(row):
     return next_treatment.strftime("%m-%d-%Y")
 
 
-merged_data = merged_data[['Link','Canyon','Common Name','Reference', 
+'''merged_data = merged_data[['Link','Canyon','Common Name','Reference', 
                            'Most Recent Date', 
                            'Total Hours',
                            'Gross Area',  'Percent Cover', 
@@ -579,21 +581,21 @@ merged_data = merged_data[['Link','Canyon','Common Name','Reference',
                            'Next return',  'est person-hours remaining','Status', 
                            'state of patch'] + date_columns + ["Latitude","Longitude"]]
 
-merged_data.to_excel('merged_data_4.xlsx', index=False)
+merged_data.to_excel('merged_data_4.xlsx', index=False)'''
 
 
 print("most recent date values")
 print(merged_data['Most Recent Date'].head())
 merged_data['Most Recent Date'] = merged_data['Most Recent Date'].dt.strftime('%m-%d-%Y')
 
-merged_data.to_excel('merged_data_5.xlsx', index=False)
+#merged_data.to_excel('merged_data_5.xlsx', index=False)
 
 
 # Apply the function to create a new column "Next Treatment Date"
 merged_data['Next Treatment Date'] = merged_data.apply(calculate_next_treatment, axis=1)
 #endregion
 
-merged_data.to_excel('merged_data_6.xlsx', index=False)
+#merged_data.to_excel('merged_data_6.xlsx', index=False)
 
 #region add Calflora links
 url_prefix = 'https://www.calflora.org/entry/poe.html#vrid='
