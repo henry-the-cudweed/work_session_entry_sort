@@ -163,12 +163,8 @@ calflora_columns = ["ID",'Gross Area', 'Common Name', 'Percent Cover',"Latitude"
 calflora_data = calflora_out[calflora_columns]
 #endregion
 
-print_row_values(calflora_data, 'ID', 'mg85138','calflora_data')
-
-calflora_data.rename(columns={'ID': 'Reference'}, inplace=True)
-
-
 #region Merge calflora_data with merged_data using the correct columns
+calflora_data.rename(columns={'ID': 'Reference'}, inplace=True)
 merged_data = pd.merge(pivot_work_session, calflora_data,on="Reference", how='outer')
 
 # Extract keys from merged_data
@@ -179,13 +175,6 @@ merged_data = pd.merge(pivot_work_session, calflora_data,on="Reference", how='ou
 
 
 #endregion
-
-merged_data.to_excel('merged_data_test.xlsx', index=False)
-print_row_values(merged_data,'Reference','mg85138','merged_data')
-
-#print("merged_data columns before status_table merge in")
-#for col in merged_data.columns:
-#    print(col)
 
 #region merge status with merged_data table
 #merged_data = merged_data.drop('Status', axis=1)
@@ -662,14 +651,10 @@ url_prefix = 'https://www.calflora.org/entry/poe.html#vrid='
 merged_data['Link'] = url_prefix + merged_data['Reference']
 #endregion
 
-
-#print("Merged data columns:")
-#print(merged_data.columns)
-
 #region reorganize merged_data columns
-merged_data = merged_data[[ 'Link','Canyon','Common Name','Reference', 
+merged_data = merged_data[[ 'Link','Canyon','Status','Common Name','Reference', 
                            'Most Recent Date', 'Next Treatment Date',
-                           'Total Hours','Status',
+                           'Total Hours',
                            'Gross Area',  'Percent Cover', 
                            'Est Infested Cover Range'] + date_columns + ["Latitude","Longitude"]]
 
@@ -682,14 +667,13 @@ merged_data.sort_values(by='Most Recent Date', ascending=False, inplace=True)
 
 #endregion
 
-
 #region Export the merged_data DataFrame to an Excel file in the same folder
 merged_data.to_excel('merged_data.xlsx', index=False)
 print("Merged data has been exported to merged_data.xlsx")
 #endregion
 
 # Identify and extract duplicate rows
-duplicates = merged_data[merged_data.duplicated('Reference', keep=False)]
+#duplicates = merged_data[merged_data.duplicated('Reference', keep=False)]
 
 # Export duplicates to Excel
-duplicates.to_excel('duplicates.xlsx', index=False)
+#duplicates.to_excel('duplicates.xlsx', index=False)
