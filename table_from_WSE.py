@@ -21,7 +21,42 @@ import config
 import requests
 from datetime import timedelta
 
+#endregion
 
+#region create print_row_values function
+def print_row_values(data_frame, reference_column, reference_value, data_frame_name):
+    # Find the row with the specified Reference value
+    selected_row = data_frame[data_frame[reference_column] == reference_value]
+
+    # Check if the row exists
+    if not selected_row.empty:
+        print("       ")
+        print("       ")
+        print("       ")
+        print(f"Values for {reference_value} in {reference_column} of {data_frame_name}:")
+        # Iterate over columns and print values
+        for column, value in selected_row.iloc[0].items():
+            print(f"{column}: {value}")
+    else:
+        print("       ")
+        print("       ")
+        print("       ")
+        print(f"No row found with {reference_value} in {reference_column} of {data_frame_name}")
+
+
+
+# Example usage
+#merged_data = pd.DataFrame({'Reference': ['mg85138', 'abc123'], 'Column1': [10, 20], 'Column2': [30, 40]})
+#print_row_values(merged_data, 'mg85138')
+        
+ #endregion
+               
+#region define variables
+veldt_grass_interval = 50
+cape_ivy_interval = 90
+thoroughwort_interval = 120
+french_broom_interval = 175
+scotch_broom_interval = 175
 #endregion
 
 #region delete old files
@@ -38,7 +73,14 @@ if os.path.exists(merged_data_file):
     os.remove(merged_data_file)
     print(f"Previous file {merged_data_file} has been deleted.")
 #endregion
+
+#region load status table
     
+status_table = pd.read_excel('status.xlsx')
+#print(status_table)
+
+#endregion
+
 #region load work_session_entry.csv and clean up
 # Assuming you have the WorkSessionEntry DataFrame
 work_session_entry = pd.read_csv('work_session_entry.csv') 
@@ -78,6 +120,7 @@ pivot_work_session = pd.read_excel(pivot_work_session_file)
 planning_sheet = pd.read_csv('planning_sheet.csv')  
 #endregion
 
+
 #region create reference_columns, date_columns
 # Extract columns from the PlanningSheet DataFrame based on the 'Reference' column
 reference_columns = ['Canyon','Status', 'Next return','state of patch', 'est person-hours remaining']
@@ -107,8 +150,8 @@ date_columns = sorted(other_columns, key=sort_date)
 column_order = ['Reference', 'Total Hours'] + reference_columns + date_columns
 
 # Reorganize columns
-merged_data = pd.merge(pivot_work_session, planning_sheet[['Reference'] + reference_columns], on='Reference', how='left')
-merged_data = merged_data[column_order]
+#merged_data_init = pd.merge(pivot_work_session, planning_sheet[['Reference'] + reference_columns], on='Reference', how='left')
+#merged_data_init = merged_data_init[column_order]
 
 #endregion column organization 
 
@@ -120,23 +163,49 @@ calflora_columns = ["ID",'Gross Area', 'Common Name', 'Percent Cover',"Latitude"
 calflora_data = calflora_out[calflora_columns]
 #endregion
 
+print_row_values(calflora_data, 'ID', 'mg85138','calflora_data')
+
+calflora_data.rename(columns={'ID': 'Reference'}, inplace=True)
+
+
 #region Merge calflora_data with merged_data using the correct columns
-merged_data = pd.merge(merged_data, calflora_data, left_on='Reference', right_on='ID', how='outer')
+merged_data = pd.merge(pivot_work_session, calflora_data,on="Reference", how='outer')
+
+# Extract keys from merged_data
+#matching_keys = merged_data['Reference'].tolist()
+
+# Filter work_session_entry to keep only rows with matching keys
+#work_session_entry_filtered = work_session_entry[work_session_entry['Reference'].isin(matching_keys)]
+
+
 #endregion
+
+merged_data.to_excel('merged_data_test.xlsx', index=False)
+print_row_values(merged_data,'Reference','mg85138','merged_data')
+
+#print("merged_data columns before status_table merge in")
+#for col in merged_data.columns:
+#    print(col)
+
+#region merge status with merged_data table
+#merged_data = merged_data.drop('Status', axis=1)
+status_columns = status_table[['Reference', 'Status']]
+merged_data = pd.merge(merged_data, status_columns, on='Reference', how='outer')
+
+#print("Status_Table Columns:")
+#print(status_table.columns)
 
 #region combine Reference and ID columns
 # Create a new column 'Merged_ID_Reference' combining 'Reference' and 'ID'
-merged_data['Merged_ID_Reference'] = merged_data['Reference'].combine_first(merged_data['ID'])
+#merged_data['Merged_ID_Reference'] = merged_data['Reference'].combine_first(merged_data['ID'])
 
 # Drop reduntant columns and rename merged_id_reference to reference
-merged_data.drop('ID', axis=1, inplace=True)
-merged_data.drop('Reference', axis=1, inplace=True)
-merged_data['Reference'] = merged_data['Merged_ID_Reference']
+#merged_data.drop('ID', axis=1, inplace=True)
+#merged_data.drop('Reference', axis=1, inplace=True)
+#merged_data['Reference'] = merged_data['Merged_ID_Reference']
 #merged_data.drop(['Merged_ID_Reference'])
 
 #endregion
-
-
 
 #region create 'Est Infested Cover Range' column 
 #Extract numerical values from "Percent Cover" column and convert to numeric
@@ -168,7 +237,6 @@ merged_data['Est Infested Cover Range'] = merged_data.apply(lambda row:
         else f"{row['low est gross cover']} sq m", axis=1
 )
 #endregion
-
 
 geojson_string = """
 {
@@ -515,20 +583,9 @@ merged_data['Most Recent Date'] = date_df.apply(lambda row: row.dropna().index[-
 # Sort the DataFrame by "Most Recent Date"
 merged_data.sort_values(by='Most Recent Date', inplace=True, ascending=False)
 
-
-#endregion
-
-
-
-
-
-#region recurrance interval formula 
-
-from datetime import timedelta
-
 merged_data['Most Recent Date'] = pd.to_datetime(merged_data['Most Recent Date'], errors='coerce')
 # Print unique values in 'Most Recent Date' for debugging
-print("Unique values in 'Most Recent Date' column:", merged_data['Most Recent Date'].unique())
+#print("Unique values in 'Most Recent Date' column:", merged_data['Most Recent Date'].unique())
 
 # Print data type and a sample row
 #print(merged_data['Most Recent Date'].dtype)
@@ -545,6 +602,8 @@ merged_data = merged_data[['Canyon','Common Name','Reference',
 
 merged_data.to_excel('merged_data_3.xlsx', index=False)
 '''
+#endregion
+
 
 # Function to determine the next treatment date
 def calculate_next_treatment(row):
@@ -557,10 +616,11 @@ def calculate_next_treatment(row):
 
     # Set the recurrence interval based on species (you can customize this)
     recurrence_interval = {
-        'Upright veldt grass': 50,
-        'Cape ivy': 120,
-        'Thoroughwort': 120,
-        'French broom': 175,
+        'Upright veldt grass': veldt_grass_interval,
+        'Cape ivy': cape_ivy_interval,
+        'Thoroughwort': thoroughwort_interval,
+        'French broom': french_broom_interval,
+        'Scotch broom':scotch_broom_interval,
         'daily' : 1,
         # Add more species with their respective intervals
     }
@@ -584,8 +644,8 @@ def calculate_next_treatment(row):
 merged_data.to_excel('merged_data_4.xlsx', index=False)'''
 
 
-print("most recent date values")
-print(merged_data['Most Recent Date'].head())
+#print("most recent date values")
+#print(merged_data['Most Recent Date'].head())
 merged_data['Most Recent Date'] = merged_data['Most Recent Date'].dt.strftime('%m-%d-%Y')
 
 #merged_data.to_excel('merged_data_5.xlsx', index=False)
@@ -602,14 +662,16 @@ url_prefix = 'https://www.calflora.org/entry/poe.html#vrid='
 merged_data['Link'] = url_prefix + merged_data['Reference']
 #endregion
 
+
+#print("Merged data columns:")
+#print(merged_data.columns)
+
 #region reorganize merged_data columns
-merged_data = merged_data[['Canyon','Common Name','Reference', 
+merged_data = merged_data[[ 'Link','Canyon','Common Name','Reference', 
                            'Most Recent Date', 'Next Treatment Date',
-                           'Total Hours',
+                           'Total Hours','Status',
                            'Gross Area',  'Percent Cover', 
-                           'Est Infested Cover Range',
-                           'Next return',  'est person-hours remaining','Status', 
-                           'state of patch'] + date_columns + ["Latitude","Longitude"]]
+                           'Est Infested Cover Range'] + date_columns + ["Latitude","Longitude"]]
 
 merged_data['Most Recent Date'] = pd.to_datetime(merged_data['Most Recent Date'], 
                                                   format='%m-%d-%Y').dt.strftime('%m-%d-%Y')
@@ -625,3 +687,9 @@ merged_data.sort_values(by='Most Recent Date', ascending=False, inplace=True)
 merged_data.to_excel('merged_data.xlsx', index=False)
 print("Merged data has been exported to merged_data.xlsx")
 #endregion
+
+# Identify and extract duplicate rows
+duplicates = merged_data[merged_data.duplicated('Reference', keep=False)]
+
+# Export duplicates to Excel
+duplicates.to_excel('duplicates.xlsx', index=False)
