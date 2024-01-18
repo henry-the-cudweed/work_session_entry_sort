@@ -125,7 +125,7 @@ pivot_work_session = pd.read_excel(pivot_work_session_file)
 #endregion
 
 #region load planning_sheet
-planning_sheet = pd.read_csv('planning_sheet.csv')  
+#planning_sheet = pd.read_csv('planning_sheet.csv')  
 #endregion
 
 
@@ -167,7 +167,7 @@ column_order = ['Reference', 'Total Hours'] + reference_columns + date_columns
 calflora_out = pd.read_csv('calflora-out.csv')  
 
 # Select the desired columns
-calflora_columns = ["ID",'Gross Area', 'Common Name', 'Percent Cover',"Latitude","Longitude"]
+calflora_columns = ["ID",'Gross Area', 'Common Name', 'Percent Cover',"Latitude","Longitude","Project"]
 calflora_data = calflora_out[calflora_columns]
 #endregion
 
@@ -201,6 +201,8 @@ print_all_columns(merged_data)
 #merged_data = merged_data.drop('Status', axis=1)
 status_columns = status_table[['Reference', 'Status']]
 merged_data = pd.merge(merged_data, status_columns, on='Reference', how='outer')
+
+
 
 # Create a new column 'Source_Status' and set it to 'Not Found'
 merged_data['Source_Status'] = 'Not Found'
@@ -648,7 +650,7 @@ def calculate_next_treatment(row):
     return next_treatment.strftime("%m-%d-%Y")
 
 
-'''merged_data = merged_data[['Link','Canyon','Common Name','Reference', 
+'''merged_data = merged_data[['Link','Project','Canyon','Common Name','Reference', 
                            'Most Recent Date', 
                            'Total Hours',
                            'Gross Area',  'Percent Cover', 
@@ -678,7 +680,7 @@ merged_data['Link'] = url_prefix + merged_data['Reference']
 #endregion
 
 #region reorganize merged_data columns
-merged_data = merged_data[[ 'Link','Source','Source_Status','Canyon','Status','Common Name','Reference', 
+merged_data = merged_data[[ 'Link','Project','Source','Source_Status','Canyon','Status','Common Name','Reference', 
                            'Most Recent Date', 'Next Treatment Date',
                            'Total Hours',
                            'Gross Area',  'Percent Cover', 
@@ -687,9 +689,11 @@ merged_data = merged_data[[ 'Link','Source','Source_Status','Canyon','Status','C
 merged_data['Most Recent Date'] = pd.to_datetime(merged_data['Most Recent Date'], 
                                                   format='%m-%d-%Y').dt.strftime('%m-%d-%Y')
 
-
-
+# Sort Data By Most Recent Date First
 merged_data.sort_values(by='Most Recent Date', ascending=False, inplace=True)
+
+# Delete data stored in non-target projects
+merged_data = merged_data[merged_data['Project'] != "Cypress Grove - Weed Treatment"]
 
 #endregion
 
