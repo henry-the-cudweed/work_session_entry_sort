@@ -50,7 +50,14 @@ def print_row_values(data_frame, reference_column, reference_value, data_frame_n
 #print_row_values(merged_data, 'mg85138')
         
  #endregion
-               
+
+#region create print_all_columns function
+
+def print_all_columns(data_frame):
+    for column in data_frame.columns:
+        print(column)
+#endregion
+                     
 #region define variables
 veldt_grass_interval = 50
 cape_ivy_interval = 90
@@ -83,17 +90,18 @@ status_table = pd.read_excel('status.xlsx')
 
 #region load work_session_entry.csv and clean up
 # Assuming you have the WorkSessionEntry DataFrame
-work_session_entry = pd.read_csv('work_session_entry.csv') 
+#work_session_entry = pd.read_csv('work_session_entry.csv') 
 
+work_session_entry = pd.read_csv('wsession-out.csv')
 work_session_entry['Reference'] = work_session_entry['Reference'].str.lower()
 
 # Convert 'Person-Hours' column in work_session_entry to numeric in case it's not already
-work_session_entry['Person-Hours'] = pd.to_numeric(work_session_entry['Person-Hours'], errors='coerce')
+work_session_entry['Person Hours'] = pd.to_numeric(work_session_entry['Person Hours'], errors='coerce')
 #endregion
 
 #region create pivot_work_session with columns for each work date, add total hours column
 # Pivot the WorkSessionEntry DataFrame with proper aggregation using aggfunc='sum'
-pivot_work_session = work_session_entry.pivot_table(index='Reference', columns='Date', values='Person-Hours', aggfunc='sum')
+pivot_work_session = work_session_entry.pivot_table(index='Reference', columns='Date', values='Person Hours', aggfunc='sum')
 
 # Reset the index to make 'Reference' a regular column
 pivot_work_session = pivot_work_session.reset_index()
@@ -165,8 +173,21 @@ calflora_data = calflora_out[calflora_columns]
 
 #region Merge calflora_data with merged_data using the correct columns
 calflora_data.rename(columns={'ID': 'Reference'}, inplace=True)
-merged_data = pd.merge(pivot_work_session, calflora_data,on="Reference", how='outer')
+merged_data = pd.merge(pivot_work_session, calflora_data,on="Reference", how='outer',indicator=True)
 
+print_all_columns(merged_data)
+
+
+# Create a 'Source' column
+merged_data['Source'] = 'Not Found'
+merged_data.loc[merged_data['_merge'] == 'left_only', 'Source'] = 'Work Session'
+merged_data.loc[merged_data['_merge'] == 'right_only', 'Source'] = 'Calflora'
+merged_data.loc[merged_data['_merge'] == 'both', 'Source'] = 'Both'
+
+# Drop the '_merge' column if it's not needed in the final DataFrame
+#merged_data.drop('_merge', axis=1, inplace=True)
+
+print_all_columns(merged_data)
 # Extract keys from merged_data
 #matching_keys = merged_data['Reference'].tolist()
 
@@ -181,8 +202,13 @@ merged_data = pd.merge(pivot_work_session, calflora_data,on="Reference", how='ou
 status_columns = status_table[['Reference', 'Status']]
 merged_data = pd.merge(merged_data, status_columns, on='Reference', how='outer')
 
-#print("Status_Table Columns:")
-#print(status_table.columns)
+# Create a new column 'Source_Status' and set it to 'Not Found'
+merged_data['Source_Status'] = 'Not Found'
+
+# Update 'Source_Status' to 'Status' for rows where 'Reference' is in both 'status_columns' and 'merged_data'
+merged_data.loc[merged_data['_merge'] == 'both', 'Source_Status'] = 'Status'
+#endregion
+
 
 #region combine Reference and ID columns
 # Create a new column 'Merged_ID_Reference' combining 'Reference' and 'ID'
@@ -652,7 +678,7 @@ merged_data['Link'] = url_prefix + merged_data['Reference']
 #endregion
 
 #region reorganize merged_data columns
-merged_data = merged_data[[ 'Link','Canyon','Status','Common Name','Reference', 
+merged_data = merged_data[[ 'Link','Source','Source_Status','Canyon','Status','Common Name','Reference', 
                            'Most Recent Date', 'Next Treatment Date',
                            'Total Hours',
                            'Gross Area',  'Percent Cover', 

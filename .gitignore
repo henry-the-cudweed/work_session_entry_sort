@@ -8,3 +8,4 @@ merged_data.xlsx
 merged_data_*.xlsx
 config.py
 duplicates.xlsx
+wsession-out.csv
