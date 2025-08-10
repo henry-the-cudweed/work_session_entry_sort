@@ -702,6 +702,9 @@ merged_data.to_excel('merged_data.xlsx', index=False)
 print("Merged data has been exported to merged_data.xlsx")
 #endregion
 
+#### NOTE I think that merged_data.xlsx was renamed to planning worksheet in this github repository
+
+
 # Identify and extract duplicate rows
 #duplicates = merged_data[merged_data.duplicated('Reference', keep=False)]
 
